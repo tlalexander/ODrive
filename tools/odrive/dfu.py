@@ -20,6 +20,13 @@ import odrive
 from odrive.utils import Event, OperationAbortedException
 from odrive.dfuse import *
 
+if sys.version_info < (3, 0):
+    _print = print
+    def print(*vals, **kwargs):
+        _print(*vals)
+        if kwargs.get('flush', False):
+            sys.stdout.flush()
+
 try:
     from intelhex import IntelHex
 except:
@@ -142,8 +149,8 @@ class FirmwareFromGithub(Firmware):
 
         hw_version_regex = r'.*v([0-9]+).([0-9]+)(-(?P<voltage>[0-9]+)V)?.hex'
         hw_version_match = re.search(hw_version_regex, asset_json['name'])
-        self.hw_version = (int(hw_version_match[1]),
-                          int(hw_version_match[2]),
+        self.hw_version = (int(hw_version_match.group(1)),
+                          int(hw_version_match.group(2)),
                           int(hw_version_match.groupdict().get('voltage') or 0))
         self.github_asset_id = asset_json['id']
         self.hex = None
@@ -216,16 +223,19 @@ def put_into_dfu_mode(device, cancellation_token):
     Puts the specified device into DFU mode
     """
     if not hasattr(device, "enter_dfu_mode"):
-        print("The firmware on device {} does not support DFU. You need to \n"
-              "flash the firmware once using STLink (`make flash`), after that \n"
-              "DFU with this script should work fine."
+        print("The firmware on device {} cannot soft enter DFU mode.\n"
+              "Please remove power, put the DFU switch into DFU mode,\n"
+              "then apply power again. Then try again.\n"
+              "If it still doesn't work, you can try to use the DeFuse app or \n"
+              "dfu-util, see the odrive documentation.\n"
+              "You can also flash the firmware using STLink (`make flash`)"
               .format(device.__channel__.usb_device.serial_number))
         return
         
     print("Putting device {} into DFU mode...".format(device.__channel__.usb_device.serial_number))
     try:
         device.enter_dfu_mode()
-    except fibre.ChannelBrokenException:
+    except fibre.ObjectLostError:
         pass # this is expected because the device reboots
     if platform.system() == "Windows":
         show_deferred_message("Still waiting for the device to reappear.\n"
@@ -337,6 +347,7 @@ def update_device(device, firmware, logger, cancellation_token):
         logger.debug(" {:08X} to {:08X}".format(start, end - 1))
 
     # Back up configuration
+    do_backup_config = False
     if dfudev is None:
         do_backup_config = device.user_config_loaded if hasattr(device, 'user_config_loaded') else False
         if do_backup_config:

@@ -5,10 +5,16 @@ import threading
 import fibre
 import odrive
 import odrive.enums
-from odrive.utils import start_liveplotter, dump_errors
-#from odrive.enums import * # pylint: disable=W0614
+from odrive.utils import *
 
 def print_banner():
+    print("Website: https://odriverobotics.com/")
+    print("Docs: https://docs.odriverobotics.com/")
+    print("Forums: https://discourse.odriverobotics.com/")
+    print("Discord: https://discord.gg/k3ZZ3mS")
+    print("Github: https://github.com/madcowswe/ODrive/")
+
+    print()
     print('Please connect your ODrive.')
     print('You can also type help() or quit().')
 
@@ -24,10 +30,10 @@ def print_help(args, have_devices):
         print('Type "odrv0." and press <tab>')
     print('This will present you with all the properties that you can reference')
     print('')
-    print('For example: "odrv0.motor0.encoder.pos_estimate"')
-    print('will print the current encoder position on motor 0')
-    print('and "odrv0.motor0.pos_setpoint = 10000"')
-    print('will send motor0 to 10000')
+    print('For example: "odrv0.axis0.encoder.pos_estimate"')
+    print('will print the current encoder position on axis 0')
+    print('and "odrv0.axis0.controller.input_pos = 0.5"')
+    print('will send axis 0 to 0.5 turns')
     print('')
 
 
@@ -35,39 +41,19 @@ interactive_variables = {}
 
 discovered_devices = []
 
-def did_discover_device(odrive, logger, app_shutdown_token):
-    """
-    Handles the discovery of new devices by displaying a
-    message and making the device available to the interactive
-    console
-    """
-    serial_number = odrive.serial_number if hasattr(odrive, 'serial_number') else "[unknown serial number]"
-    if serial_number in discovered_devices:
-        verb = "Reconnected"
-        index = discovered_devices.index(serial_number)
-    else:
-        verb = "Connected"
-        discovered_devices.append(serial_number)
-        index = len(discovered_devices) - 1
-    interactive_name = "odrv" + str(index)
+def benchmark(odrv):
+    import asyncio
+    import time
 
-    # Publish new ODrive to interactive console
-    interactive_variables[interactive_name] = odrive
-    globals()[interactive_name] = odrive # Add to globals so tab complete works
-    logger.notify("{} to ODrive {:012X} as {}".format(verb, serial_number, interactive_name))
+    async def measure_async():
+        start = time.monotonic()
+        futures = [odrv.vbus_voltage for i in range(1000)]
+#        data = [await f for f in futures]
+#        print("took " + str(time.monotonic() - start) + " seconds. Average is " + str(sum(data) / len(data)))
 
-    # Subscribe to disappearance of the device
-    odrive.__channel__._channel_broken.subscribe(lambda: did_lose_device(interactive_name, logger, app_shutdown_token))
+    fibre.libfibre.libfibre.loop.call_soon_threadsafe(lambda: asyncio.ensure_future(measure_async()))
 
-def did_lose_device(interactive_name, logger, app_shutdown_token):
-    """
-    Handles the disappearance of a device by displaying
-    a message.
-    """
-    if not app_shutdown_token.is_set():
-        logger.warn("Oh no {} disappeared".format(interactive_name))
-
-def launch_shell(args, logger, app_shutdown_token):
+def launch_shell(args, logger):
     """
     Launches an interactive python or IPython command line
     interface.
@@ -77,14 +63,29 @@ def launch_shell(args, logger, app_shutdown_token):
 
     interactive_variables = {
         'start_liveplotter': start_liveplotter,
-        'dump_errors': dump_errors
+        'dump_errors': dump_errors,
+        'benchmark': benchmark,
+        'oscilloscope_dump': oscilloscope_dump,
+        'dump_interrupts': dump_interrupts,
+        'dump_threads': dump_threads,
+        'dump_dma': dump_dma,
+        'dump_timing': dump_timing,
+        'BulkCapture': BulkCapture,
+        'step_and_plot': step_and_plot,
+        'calculate_thermistor_coeffs': calculate_thermistor_coeffs,
+        'set_motor_thermistor_coeffs': set_motor_thermistor_coeffs
     }
 
     # Expose all enums from odrive.enums
     interactive_variables.update({k: v for (k, v) in odrive.enums.__dict__.items() if not k.startswith("_")})
 
-    fibre.launch_shell(args,
+    async def mount(obj):
+        serial_number_str = await odrive.utils.get_serial_number_str(obj)
+        if ((not args.serial_number is None) and (serial_number_str != args.serial_number)):
+            return None # reject this object
+        return ("ODrive " + serial_number_str, "odrv")
+
+    fibre.launch_shell(args, mount,
                        interactive_variables,
                        print_banner, print_help,
-                       logger, app_shutdown_token,
-                       branding_short="odrv", branding_long="ODrive")
+                       logger)

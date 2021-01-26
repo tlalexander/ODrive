@@ -3,122 +3,82 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceRoot}",
-                "${workspaceRoot}/fibre/cpp/include/**",
-                "${workspaceRoot}/MotorControl",
-                "${workspaceRoot}/communication",
-                "${workspaceRoot}/Drivers/DRV8301",
-                "${workspaceRoot}/Board/v3/Inc",
-                "${workspaceRoot}/Board/v3/Drivers/CMSIS/Include",
-                "${workspaceRoot}/Board/v3/Drivers/CMSIS/Device/ST/STM32F4xx/Include",
-                "${workspaceRoot}/Board/v3/Drivers/STM32F4xx_HAL_Driver/Inc",
-                "${workspaceRoot}/Board/v3/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy",
-                "${workspaceRoot}/Board/v3/Middlewares/ST/STM32_USB_Device_Library/Core/Inc",
-                "${workspaceRoot}/Board/v3/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc",
-                "${workspaceRoot}/Board/v3/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS",
-                "${workspaceRoot}/Board/v3/Middlewares/Third_Party/FreeRTOS/Source/include",
-                "${workspaceRoot}/Board/v3/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F"
+                "${workspaceFolder}/Private/**",
+                "${workspaceFolder}/**"
             ],
             "defines": [
-                "STM32F405xx",
+                "__arm__",
+                "STM32F722xx",
+                "FPU_FPV5",
                 "USE_HAL_DRIVER",
-                "HW_VERSION_MAJOR=3",
-                "HW_VERSION_MINOR=6",
-                "HW_VERSION_VOLTAGE=56",
-                "USB_PROTOCOL_NATIVE",
+                "HW_VERSION_MAJOR=4",
+                "HW_VERSION_MINOR=1",
+                "HW_VERSION_VOLTAGE=58",
+                "FIBRE_ENABLE_SERVER",
+                "FIBRE_ENABLE_CLIENT",
                 "__weak=\"__attribute__((weak))\"",
                 "__packed=\"__attribute__((__packed__))\"",
                 "__GNUC__"
             ],
-            "intelliSenseMode": "clang-x64",
-            "compilerPath": "\"${ARM_GCC_ROOT}/bin/arm-none-eabi-gcc.exe\" -mthumb -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -specs=nosys.specs -specs=nano.specs -u _printf_float -u _scanf_float",
+            "intelliSenseMode": "gcc-arm",
+            "compilerPath": "arm-none-eabi-g++.exe",
+            "compilerArgs": [
+                "-mthumb",
+                "-mcpu=cortex-m7",
+                "-mfpu=fpv5-sp-d16",
+                "-mfloat-abi=hard",
+                "-specs=nosys.specs",
+                "-specs=nano.specs",
+                "-u _printf_float",
+                "-u _scanf_float"
+            ],
             "cStandard": "c11",
-            "cppStandard": "c++14"
+            "cppStandard": "c++17"
         },
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceRoot}",
-                "${workspaceRoot}/fibre/cpp/include/**",
-                "${workspaceRoot}/MotorControl",
-                "${workspaceRoot}/communication",
-                "${workspaceRoot}/Drivers/DRV8301",
-                "${workspaceRoot}/Board/v3/Inc",
-                "${workspaceRoot}/Board/v3/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F",
-                "${workspaceRoot}/Board/v3/Middlewares/Third_Party/FreeRTOS/Source/include",
-                "${workspaceRoot}/Board/v3/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS",
-                "${workspaceRoot}/Board/v3/Middlewares/ST/STM32_USB_Device_Library/Core/Inc",
-                "${workspaceRoot}/Board/v3/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc",
-                "${workspaceRoot}/Board/v3/Drivers/STM32F4xx_HAL_Driver/Inc",
-                "${workspaceRoot}/Board/v3/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy",
-                "${workspaceRoot}/Board/v3/Drivers/CMSIS/Device/ST/STM32F4xx/Include",
-                "${workspaceRoot}/Board/v3/Drivers/CMSIS/Include",
-                "${ARM_GCC_ROOT}/arm-none-eabi/include/**",
-                "${ARM_GCC_ROOT}/lib/gcc/arm-none-eabi/**"
+                "${workspaceFolder}/**"
             ],
             "defines": [
+                "__arm__",
                 "STM32F405xx",
+                "FPU_FPV4",
                 "USE_HAL_DRIVER",
-                "HW_VERSION_MAJOR=3",
-                "HW_VERSION_MINOR=4",
-                "HW_VERSION_VOLTAGE=24",
+                "HW_VERSION_MAJOR=4",
+                "HW_VERSION_MINOR=1",
+                "HW_VERSION_VOLTAGE=58",
+                "FIBRE_ENABLE_SERVER",
+                "FIBRE_ENABLE_CLIENT",
                 "__weak=\"__attribute__((weak))\"",
                 "__packed=\"__attribute__((__packed__))\"",
                 "__GNUC__"
             ],
-            "intelliSenseMode": "clang-x64",
-            "browse": {
-                "path": [
-                    "${workspaceRoot}",
-                    "${ARM_GCC_ROOT}"
-                ],
-                "limitSymbolsToIncludedHeaders": true,
-                "databaseFilename": ""
-            },
-            "compilerPath": "arm-none-eabi-gcc -mthumb -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -specs=nosys.specs -specs=nano.specs -u _printf_float -u _scanf_float",
+            "intelliSenseMode": "gcc-arm",
+            "compilerPath": "arm-none-eabi-g++ -mthumb -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -specs=nosys.specs -specs=nano.specs -u _printf_float -u _scanf_float",
             "cStandard": "c11",
-            "cppStandard": "c++14"
+            "cppStandard": "c++17"
         },
         {
             "name": "Mac",
             "includePath": [
-                "${workspaceRoot}",
-                "${workspaceRoot}/fibre/cpp/include/**",
-                "${workspaceRoot}/MotorControl",
-                "${workspaceRoot}/communication",
-                "${workspaceRoot}/Drivers/DRV8301",
-                "${workspaceRoot}/Board/v3/Inc",
-                "${workspaceRoot}/Board/v3/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F",
-                "${workspaceRoot}/Board/v3/Middlewares/Third_Party/FreeRTOS/Source/include",
-                "${workspaceRoot}/Board/v3/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS",
-                "${workspaceRoot}/Board/v3/Middlewares/ST/STM32_USB_Device_Library/Core/Inc",
-                "${workspaceRoot}/Board/v3/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc",
-                "${workspaceRoot}/Board/v3/Drivers/STM32F4xx_HAL_Driver/Inc",
-                "${workspaceRoot}/Board/v3/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy",
-                "${workspaceRoot}/Board/v3/Drivers/CMSIS/Device/ST/STM32F4xx/Include",
-                "${workspaceRoot}/Board/v3/Drivers/CMSIS/Include",
-                "${ARM_GCC_ROOT}/arm-none-eabi/include/**",
-                "${ARM_GCC_ROOT}/lib/gcc/arm-none-eabi/**"
+                "${workspaceFolder}/**"
             ],
             "defines": [
+                "__arm__",
                 "STM32F405xx",
+                "FPU_FPV4",
                 "USE_HAL_DRIVER",
-                "HW_VERSION_MAJOR=3",
-                "HW_VERSION_MINOR=4",
-                "HW_VERSION_VOLTAGE=24",
+                "HW_VERSION_MAJOR=4",
+                "HW_VERSION_MINOR=1",
+                "HW_VERSION_VOLTAGE=58",
+                "FIBRE_ENABLE_SERVER",
+                "FIBRE_ENABLE_CLIENT",
                 "__weak=\"__attribute__((weak))\"",
                 "__packed=\"__attribute__((__packed__))\"",
                 "__GNUC__"
             ],
-            "intelliSenseMode": "clang-x64",
-            "browse": {
-                "path": [
-                    "${workspaceRoot}",
-                    "${ARM_GCC_ROOT}"
-                ],
-                "limitSymbolsToIncludedHeaders": true,
-                "databaseFilename": ""
-            },
+            "intelliSenseMode": "gcc-arm",
             "cStandard": "c11",
             "cppStandard": "c++17"
         }

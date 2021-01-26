@@ -1,14 +1,15 @@
 
 # Hoverboard motor and remote control setup guide
 By popular request here follows a step-by-step guide on how to setup the ODrive to drive hoverboard motors using RC PWM input.
-Each step is acompanied by some explanation so hopefully you can carry over some of the steps to other setups and configurations.
+Each step is accompanied by some explanation so hopefully you can carry over some of the steps to other setups and configurations.
+
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/ponx_U4xhoM/0.jpg)](https://www.youtube.com/watch?v=ponx_U4xhoM) <br> Click above to play video.
 
 ### Hoverboard motor wiring
 Hoverboard motors come with three motor phases (usually colored yellow, blue, green) which are thicker, and a set of 5 thinner wires for the hall sensor feedback (usually colored red, yellow, blue, green, black).
 
-You may wire the motor phases in any order into a motor connector on the ODrive, as we will calibrate the phase alignment later anyway. Wire the hall feedback into the ODrive J4 conenctor (make sure that the motor channel number matches) as follows:
+You may wire the motor phases in any order into a motor connector on the ODrive, as we will calibrate the phase alignment later anyway. Wire the hall feedback into the ODrive J4 connector (make sure that the motor channel number matches) as follows:
 
 | Hall wire | J4 signal |
 |-----------|-----------|
@@ -18,7 +19,7 @@ You may wire the motor phases in any order into a motor connector on the ODrive,
 | Green     | Z         |
 | Black     | GND       |
 
-Note: In order to ber compatible with encoder inputs, the ODrive doesn't have any filtering capacitors on the pins where the hall sensors connect. Therefore to get a reliable hall signal, it is recommended that you add some filter capacitors to these pins. You can see instructions [here](https://discourse.odriverobotics.com/t/encoder-error-error-illegal-hall-state/1047/7?u=madcowswe).
+Note: In order to be compatible with encoder inputs, the ODrive doesn't have any filtering capacitors on the pins where the hall sensors connect. Therefore to get a reliable hall signal, it is recommended that you add some filter capacitors to these pins. You can see instructions [here](https://discourse.odriverobotics.com/t/encoder-error-error-illegal-hall-state/1047/7?u=madcowswe).
 
 
 ### Hoverboard motor configuration
@@ -35,11 +36,14 @@ odrv0.axis0.motor.config.requested_current_range = 25 #Requires config save and 
 odrv0.axis0.motor.config.current_control_bandwidth = 100
 ```
 
-Set the encoder to hall mode (instead of incremental). See the [pinout](interfaces.md#hall-feedback-pinout) for instructions on how to plug in the hall feedback.
+Set the encoder to hall mode (instead of incremental). See the [pinout](encoders.md#hall-effect-encoders) for instructions on how to plug in the hall feedback.
 The hall feedback has 6 states for every pole pair in the motor. Since we have 15 pole pairs, we set the cpr to 15*6 = 90.
 ```txt
 odrv0.axis0.encoder.config.mode = ENCODER_MODE_HALL
 odrv0.axis0.encoder.config.cpr = 90
+odrv0.config.gpio9_mode = GPIO_MODE_DIGITAL
+odrv0.config.gpio10_mode = GPIO_MODE_DIGITAL
+odrv0.config.gpio11_mode = GPIO_MODE_DIGITAL
 ```
 
 Since the hall feedback only has 90 counts per revolution, we want to reduce the velocity tracking bandwidth to get smoother velocity estimates.
@@ -51,10 +55,10 @@ odrv0.axis0.controller.config.pos_gain = 1
 odrv0.axis0.controller.config.vel_gain = 0.02
 odrv0.axis0.controller.config.vel_integrator_gain = 0.1
 odrv0.axis0.controller.config.vel_limit = 1000
-odrv0.axis0.controller.config.control_mode = CTRL_MODE_VELOCITY_CONTROL
+odrv0.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
 ```
 
-In the next step we are going to start powering the motor and so we want to make sure that some of the above settings that requrie a reboot are applied first.
+In the next step we are going to start powering the motor and so we want to make sure that some of the above settings that require a reboot are applied first.
 ```txt
 odrv0.save_configuration()
 odrv0.reboot()
@@ -77,7 +81,7 @@ Check to see that there is no error and that the phase resistance and inductance
   phase_resistance = 0.1793474406003952 (float)
 ```
 
-If all looks good then you can tell the ODrive that saving this calibration to presistent memory is OK:
+If all looks good then you can tell the ODrive that saving this calibration to persistent memory is OK:
 ```txt
 odrv0.axis0.motor.config.pre_calibrated = True
 ```
@@ -94,7 +98,7 @@ Check the status of the encoder object:
 odrv0.axis0.encoder
 ```
 
-Check that there are no errors. If your hall sensors has a standard timing angle then `offset_float` should be close to 0.5.
+Check that there are no errors. If your hall sensors has a standard timing angle then `offset_float` should be close to 0.5 or 1.5.
 ```txt
   error = 0x0000 (int)
   offset_float = 0.5126956701278687 (float)
@@ -111,47 +115,47 @@ The ODrive starts in idle (we will look at changing this later) so we can enable
 odrv0.save_configuration()
 odrv0.reboot()
 odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-odrv0.axis0.controller.vel_setpoint = 120
+odrv0.axis0.controller.input_vel = 120
 # Your motor should spin here
-odrv0.axis0.controller.vel_setpoint = 0
+odrv0.axis0.controller.input_vel = 0
 odrv0.axis0.requested_state = AXIS_STATE_IDLE
 ```
 
 Hopefully you got your motor to spin! Feel free to repeat all of the above for the other axis if appropriate.
 
 ### PWM input
-If you want to drive your hoverboard wheels around with an RC remote control you can use the [RC PWM input](interfaces.md#rc-pwm-input). There is more information in that link.
+If you want to drive your hoverboard wheels around with an RC remote control you can use the [RC PWM input](rc-pwm.md). There is more information in that link.
 Lets use GPIO 3/4 for the velocity inputs so that we don't have to disable UART.
 Then let's map the full stick range of these inputs to some suitable velocity setpoint range.
 We also have to reboot to activate the PWM input.
 ```txt
 odrv0.config.gpio3_pwm_mapping.min = -200
 odrv0.config.gpio3_pwm_mapping.max = 200
-odrv0.config.gpio3_pwm_mapping.endpoint = odrv0.axis0.controller._remote_attributes['vel_setpoint']
+odrv0.config.gpio3_pwm_mapping.endpoint = odrv0.axis0.controller._input_vel_property
 
 odrv0.config.gpio4_pwm_mapping.min = -200
 odrv0.config.gpio4_pwm_mapping.max = 200
-odrv0.config.gpio4_pwm_mapping.endpoint = odrv0.axis1.controller._remote_attributes['vel_setpoint']
+odrv0.config.gpio4_pwm_mapping.endpoint = odrv0.axis1.controller._input_vel_property
 
 odrv0.save_configuration()
 odrv0.reboot()
 ```
 
-Now we can check that the sticks are writing to the velocity setpoint. Move the stick, print `vel_setpoint`, move to a different position, check again.
+Now we can check that the sticks are writing to the velocity setpoint. Move the stick, print `input_vel`, move to a different position, check again.
 ```txt
-In [1]: odrv0.axis1.controller.vel_setpoint
+In [1]: odrv0.axis1.controller.input_vel
 Out[1]: 0.1904754638671875
 
-In [2]: odrv0.axis1.controller.vel_setpoint
+In [2]: odrv0.axis1.controller.input_vel
 Out[2]: 0.1904754638671875
 
-In [3]: odrv0.axis1.controller.vel_setpoint
+In [3]: odrv0.axis1.controller.input_vel
 Out[3]: 28.152389526367188
 
-In [4]: odrv0.axis1.controller.vel_setpoint
+In [4]: odrv0.axis1.controller.input_vel
 Out[4]: 61.21905517578125
 
-In [5]: odrv0.axis1.controller.vel_setpoint
+In [5]: odrv0.axis1.controller.input_vel
 Out[5]: -52.990474700927734
 ```
 

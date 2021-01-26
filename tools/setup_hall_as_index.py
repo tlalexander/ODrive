@@ -28,9 +28,8 @@ for ax in axes:
     ax.encoder.config.cpr = 4096
     ax.encoder.config.use_index = True
     ax.encoder.config.find_idx_on_lockin_only = True
-    ax.encoder.config.idx_search_unidirectional = True
 
-    ax.controller.config.control_mode = CTRL_MODE_VELOCITY_CONTROL
+    ax.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
     ax.controller.config.vel_limit = 10000
     ax.controller.config.vel_gain = 0.002205736003816127
     ax.controller.config.vel_integrator_gain = 0.022057360038161278
@@ -45,7 +44,7 @@ for ax in axes:
 def wait_and_exit_on_error(ax):
     while ax.current_state != AXIS_STATE_IDLE:
         time.sleep(0.1)
-    if ax.error != errors.axis.ERROR_NONE:
+    if ax.error != AXIS_ERROR_NONE:
         dump_errors(odrv, True)
         exit()
 
@@ -93,5 +92,5 @@ if save_and_reboot:
     odrv.save_configuration()
     try:
         odrv.reboot()
-    except odrive.fibre.ChannelBrokenException:
+    except odrive.fibre.ObjectLostError:
         pass
