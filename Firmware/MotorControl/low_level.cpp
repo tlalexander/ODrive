@@ -652,6 +652,15 @@ uint32_t gpio_num_to_tim_2_5_channel(int gpio_num) {
 #endif
 }
 
+
+//static 
+#define pwm_in_init_pin(gpio_num) \
+            GPIO_InitStruct.Pin = get_gpio_pin_by_pin(gpio_num); \
+            HAL_GPIO_DeInit(get_gpio_port_by_pin(gpio_num), get_gpio_pin_by_pin(gpio_num)); \
+            HAL_GPIO_Init(get_gpio_port_by_pin(gpio_num), &GPIO_InitStruct); \
+            HAL_TIM_IC_ConfigChannel(&htim5, &sConfigIC, gpio_num_to_tim_2_5_channel(gpio_num)); \
+            HAL_TIM_IC_Start_IT(&htim5, gpio_num_to_tim_2_5_channel(gpio_num));
+
 void pwm_in_init() {
     GPIO_InitTypeDef GPIO_InitStruct;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -671,13 +680,12 @@ void pwm_in_init() {
     int gpio_num = 4; {
 #endif
         if (is_endpoint_ref_valid(board_config.pwm_mappings[gpio_num - 1].endpoint)) {
-            GPIO_InitStruct.Pin = get_gpio_pin_by_pin(gpio_num);
-            HAL_GPIO_DeInit(get_gpio_port_by_pin(gpio_num), get_gpio_pin_by_pin(gpio_num));
-            HAL_GPIO_Init(get_gpio_port_by_pin(gpio_num), &GPIO_InitStruct);
-            HAL_TIM_IC_ConfigChannel(&htim5, &sConfigIC, gpio_num_to_tim_2_5_channel(gpio_num));
-            HAL_TIM_IC_Start_IT(&htim5, gpio_num_to_tim_2_5_channel(gpio_num));
+            pwm_in_init_pin(gpio_num);
         }
     }
+    /* TODO don't hardcode crap for mix */
+    pwm_in_init_pin(3);
+    pwm_in_init_pin(4);
 }
 
 //TODO: These expressions have integer division by 1MHz, so it will be incorrect for clock speeds of not-integer MHz
@@ -687,6 +695,55 @@ void pwm_in_init() {
 #define PWM_MIN_LEGAL_HIGH_TIME    ((TIM_2_5_CLOCK_HZ / 1000000UL) * 500UL) // ignore high periods shorter than 0.5ms
 #define PWM_MAX_LEGAL_HIGH_TIME    ((TIM_2_5_CLOCK_HZ / 1000000UL) * 2500UL) // ignore high periods longer than 2.5ms
 #define PWM_INVERT_INPUT        false
+
+static float last_steering;
+
+void update_mix_endpoint(const struct MIXMapping_t *mixmap, float throttle)
+{
+    if (mixmap->throttle_pin < 1 || mixmap->throttle_pin > 4 || 
+	mixmap->steer_pin < 1 || mixmap->steer_pin > 4 )
+        return;
+
+    Endpoint* l_endpoint = get_endpoint(mixmap->endpoint_l);
+    if (!l_endpoint) return;
+    Endpoint* r_endpoint = get_endpoint(mixmap->endpoint_r);
+    if (!r_endpoint) return;
+
+
+    /* TODO: check last_timestamp and last_sample_valid */
+    // hackfloat throttle = last_sample[mixmap->throttle_pin - 1];
+    float steer = last_steering;
+    float db = mixmap->deadband;
+    float l = 0;
+    float r = 0;
+
+    /* TODO: check for endpoints? */
+    if (mixmap->reverse_reverse) {
+        l = throttle - steer;
+        r = throttle + steer;
+    } else {
+        /* drive like there are steering wheels */
+        /* TODO: improve discontinuties in response */
+        if (throttle > db) {
+            l = throttle + steer;
+            r = throttle - steer;
+        } else if (throttle < -db) {
+            l = throttle - steer;
+            r = throttle + steer;
+        } else if (throttle > 0 && (steer > db || steer < -db)) {
+            l = steer;
+	    r = -steer;
+        }
+    }    
+
+    if (l > mixmap->max) l = mixmap->max;
+    if (r > mixmap->max) r = mixmap->max;
+    if (l < mixmap->min) l = mixmap->min;
+    if (r < mixmap->min) r = mixmap->min;
+
+    l_endpoint->set_from_float(l);
+    r_endpoint->set_from_float(r);
+}
 
 void handle_pulse(int gpio_num, uint32_t high_time) {
     if (high_time < PWM_MIN_LEGAL_HIGH_TIME || high_time > PWM_MAX_LEGAL_HIGH_TIME)
@@ -700,17 +757,29 @@ void handle_pulse(int gpio_num, uint32_t high_time) {
     float value = board_config.pwm_mappings[gpio_num - 1].min +
                   (fraction * (board_config.pwm_mappings[gpio_num - 1].max - board_config.pwm_mappings[gpio_num - 1].min));
 
+    /* overload this with mix mapping thread */
+    struct MIXMapping_t *mixmap = &board_config.mix_mappings[0];
+    if (gpio_num == mixmap->throttle_pin) {
+        update_mix_endpoint(mixmap, value);
+    } else if (gpio_num == mixmap->steer_pin) {
+
+        last_steering = value;
+    } 
+
+
     Endpoint* endpoint = get_endpoint(board_config.pwm_mappings[gpio_num - 1].endpoint);
+    // TODO? last_sample[gpio_num - 1] = value;
     if (!endpoint)
         return;
 
     endpoint->set_from_float(value);
 }
 
+
+static uint32_t last_timestamp[GPIO_COUNT] = { 0 };
+static bool last_pin_state[GPIO_COUNT] = { false };
+static bool last_sample_valid[GPIO_COUNT] = { false };
 void pwm_in_cb(int channel, uint32_t timestamp) {
-    static uint32_t last_timestamp[GPIO_COUNT] = { 0 };
-    static bool last_pin_state[GPIO_COUNT] = { false };
-    static bool last_sample_valid[GPIO_COUNT] = { false };
 
     int gpio_num = tim_2_5_channel_num_to_gpio_num(channel);
     if (gpio_num < 1 || gpio_num > GPIO_COUNT)
@@ -727,6 +796,7 @@ void pwm_in_cb(int channel, uint32_t timestamp) {
     last_pin_state[gpio_num - 1] = current_pin_state;
     last_sample_valid[gpio_num - 1] = true;
 }
+
 
 
 /* Analog speed control input */

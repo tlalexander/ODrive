@@ -145,10 +145,16 @@ build{
     includes=stm_includes
 }
 
-tup.frule{
-    command='python ../tools/odrive/version.py --output %o',
-    outputs={'build/version.h'}
-}
+-- put this in makefile to work around the following error:
+-- python3 -B ../tools/odrive/version.py --output autogen/version.c                                                
+--Firmware version 0.4.10-dev (fw-v0.4.10-44-ga94254ea*)
+-- *** tup messages ***
+--tup warning: Writing to hidden file '/Users/tmagik/src/odrive/.git/index'
+--tup error: Missing input dependency - a file was read from, and was not specified as an input link for the command. This is an issue because the file was created from another command, and without the input link the commands may execute out of order. You should add this file as an input, since it is possible this could randomly break in the future.
+--tup.frule{
+--    command='python3 -B ../tools/odrive/version.py --output %o',
+--    outputs={'autogen/version.c'}
+--}
 
 build{
     name='ODriveFirmware',
@@ -176,7 +182,8 @@ build{
         'communication/interface_can.cpp',
         'communication/interface_i2c.cpp',
         'fibre/cpp/protocol.cpp',
-        'FreeRTOS-openocd.c'
+        'FreeRTOS-openocd.c',
+        'autogen/version.c'
     },
     includes={
         'Drivers/DRV8301',

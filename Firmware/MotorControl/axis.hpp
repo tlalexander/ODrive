@@ -57,6 +57,7 @@ public:
                                                 // this only has an effect if encoder.config.use_index is also true
         bool startup_encoder_offset_calibration = false; //<! run encoder offset calibration after startup, skip otherwise
         bool startup_closed_loop_control = false; //<! enable closed loop control after calibration/startup
+        bool startup_brushed_voltage_control = false; //<! enable brushed voltage control after calibration/startup
         bool startup_sensorless_control = false; //<! enable sensorless control after calibration/startup
         bool enable_step_dir = false; //<! enable step/dir input after calibration
                                     //   For M0 this has no effect if enable_uart is true
@@ -232,6 +233,7 @@ public:
                 make_protocol_property("startup_encoder_index_search", &config_.startup_encoder_index_search),
                 make_protocol_property("startup_encoder_offset_calibration", &config_.startup_encoder_offset_calibration),
                 make_protocol_property("startup_closed_loop_control", &config_.startup_closed_loop_control),
+                make_protocol_property("startup_brushed_voltage_control", &config_.startup_brushed_voltage_control),
                 make_protocol_property("startup_sensorless_control", &config_.startup_sensorless_control),
                 make_protocol_property("enable_step_dir", &config_.enable_step_dir),
                 make_protocol_property("counts_per_step", &config_.counts_per_step),

@@ -176,7 +176,7 @@ bool Motor::update_thermal_limits() {
 
 bool Motor::do_checks() {
     if (!check_estop_active()) {
-        set_error(ERROR_NOT_IMPLEMENTED_MOTOR_TYPE);
+        set_error(ERROR_ESTOP_ACTIVATED);
         return false;
     }
     if (!check_DRV_fault()) {
@@ -404,7 +404,7 @@ bool Motor::enqueue_brushed_current_timings(float current_setpoint) {
     // with high current gain values. Perhaps a dedicated term could be added
     // to the protocol for this.
     float V_ramp_limit;
-    if(ictrl.final_v_beta > 0.0001)
+    if(ictrl.final_v_beta > 0.0001f)
     {
       V_ramp_limit = ictrl.final_v_beta;
     }else

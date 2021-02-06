@@ -11,13 +11,17 @@ def version_str_to_tuple(version_string):
     (major, minor, revision, prerelease)
 
     Example: "fw-v0.3.6-23" => (0, 3, 6, True)
+
+    If version_string does not match the pattern above, this function throws an
+    Exception.
     """
-    regex=r'.*v([0-9a-zA-Z]+).([0-9a-zA-Z]+).([0-9a-zA-Z]+)(.*)'
+    regex=r'.*v([0-9]+)\.([0-9]+)\.([0-9]+)(.*)'
+    if not re.match(regex, version_string):
+        raise Exception()
     return (int(re.sub(regex, r"\1", version_string)),
             int(re.sub(regex, r"\2", version_string)),
             int(re.sub(regex, r"\3", version_string)),
             (re.sub(regex, r"\4", version_string) != ""))
-
 
 def get_version_from_git():
     script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -25,17 +29,21 @@ def get_version_from_git():
         # Determine the current git commit version
         git_tag = subprocess.check_output(["git", "describe", "--always", "--tags", "--dirty=*"],
             cwd=script_dir)
-        git_tag = git_tag.decode(sys.stdout.encoding).rstrip('\n')
+        git_tag = git_tag.decode(sys.stdout.encoding or 'ascii').rstrip('\n')
 
         (major, minor, revision, is_prerelease) = version_str_to_tuple(git_tag)
 
+        git32 = subprocess.check_output(["git", "describe", "--abbrev=8", "--always"],
+            cwd=script_dir)
+        git32 = git32.decode(sys.stdout.encoding or 'ascii').rstrip('\n')
+
         # if is_prerelease:
         #     revision += 1
-        return git_tag, major, minor, revision, is_prerelease
+        return git_tag, major, minor, revision, is_prerelease, git32
 
     except Exception as ex:
         print(ex)
-        return "[unknown version]", 0, 0, 0, 1
+        return "[unknown version]", 0, 0, 0, 1, 0
 
 def get_version_str(git_only=False, is_post_release=False, bump_rev=False, release_override=False):
     """
@@ -47,12 +55,12 @@ def get_version_str(git_only=False, is_post_release=False, bump_rev=False, relea
 
     # Try to read the version.txt file that is generated during
     # the packaging step
-    version_file_path = os.path.join(script_dir, 'version.txt')
-    if os.path.exists(version_file_path) and git_only == False:
-        with open(version_file_path) as version_file:
-            return version_file.readline().rstrip('\n')
+    #version_file_path = os.path.join(script_dir, 'version.txt')
+    #if os.path.exists(version_file_path) and git_only == False:
+    #    with open(version_file_path) as version_file:
+    #        return version_file.readline().rstrip('\n')
     
-    _, major, minor, revision, unreleased = get_version_from_git()
+    _, major, minor, revision, unreleased, git32 = get_version_from_git()
     if bump_rev:
         revision += 1
     version = '{}.{}.{}'.format(major, minor, revision)
@@ -70,24 +78,27 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
 
-    git_name, major, minor, revision, unreleased = get_version_from_git()
+    git_name, major, minor, revision, unreleased, git32 = get_version_from_git()
     print('Firmware version {}.{}.{}{} ({})'.format(
         major, minor, revision, '-dev' if unreleased else '',
         git_name))
-    args.output.write('#define FW_VERSION "{}"\n'.format(git_name))
-    args.output.write('#define FW_VERSION_MAJOR {}\n'.format(major))
-    args.output.write('#define FW_VERSION_MINOR {}\n'.format(minor))
-    args.output.write('#define FW_VERSION_REVISION {}\n'.format(revision))
-    args.output.write('#define FW_VERSION_UNRELEASED {}\n'.format(1 if unreleased else 0))
+    args.output.write('#include <stdint.h>\n')
+    args.output.write('const char* fw_version_ = "{}";\n'.format(git_name))
+    args.output.write('const uint32_t fw_git32_ = 0x{};\n'.format(git32[0:8]))
+    args.output.write('const unsigned char fw_version_major_ = {};\n'.format(major))
+    args.output.write('const unsigned char fw_version_minor_ = {};\n'.format(minor))
+    args.output.write('const unsigned char fw_version_revision_ = {};\n'.format(revision))
+    args.output.write('const unsigned char fw_version_unreleased_ = {};\n'.format(1 if unreleased else 0))
 
 def setup_udev_rules(logger):
   if platform.system() != 'Linux':
-      logger.error("This command only makes sense on Linux")
+      if logger: logger.error("This command only makes sense on Linux")
       return
   if os.getuid() != 0:
-      logger.warn("you should run this as root, otherwise it will probably not work")
+      if logger: logger.warn("you should run this as root, otherwise it will probably not work")
   with open('/etc/udev/rules.d/91-odrive.rules', 'w') as file:
       file.write('SUBSYSTEM=="usb", ATTR{idVendor}=="1209", ATTR{idProduct}=="0d3[0-9]", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"\n')
+      file.write('SUBSYSTEM=="usb", ATTR{idVendor}=="0483", ATTR{idProduct}=="df11", MODE="0666"\n')
   subprocess.check_call(["udevadm", "control", "--reload-rules"])
   subprocess.check_call(["udevadm", "trigger"])
-  logger.info('udev rules configured successfully')
+  if logger: logger.info('udev rules configured successfully')

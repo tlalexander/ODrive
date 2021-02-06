@@ -63,7 +63,8 @@ function GCCToolchain(prefix, builddir, compiler_flags, linker_flags)
             inc_flags += "-I"..inc
         end
         -- todo: vary build directory
-        obj_file = builddir.."/obj/"..src:gsub("/","_")..".o"
+	obj_file = "build/"..src:gsub("/","_"):gsub("%.","")..".o"
+        --obj_file = builddir.."/obj/"..src:gsub("/","_")..".o"
         outputs.object_files += obj_file
         if gen_su_file then
             su_file = builddir.."/"..src:gsub("/","_")..".su"
@@ -72,7 +73,7 @@ function GCCToolchain(prefix, builddir, compiler_flags, linker_flags)
         else
             extra_outputs = {}
         end
-        if src == 'communication/communication.cpp' then extra_inputs = 'build/version.h' end -- TODO: fix hack
+        -- if src == 'communication/communication.cpp' then extra_inputs = 'build/version.h' end -- TODO: fix hack
         tup.frule{
             inputs= { src, extra_inputs=extra_inputs },
             command=compiler..' -c %f '..
@@ -85,15 +86,16 @@ function GCCToolchain(prefix, builddir, compiler_flags, linker_flags)
     end
     return {
         compile_c = function(src, flags, includes, outputs) gcc_generic_compiler(prefix..'gcc -std=c99', compiler_flags, calculate_stack_usage, src, flags, includes, outputs) end,
-        compile_cpp = function(src, flags, includes, outputs) gcc_generic_compiler(prefix..'g++ -std=c++14', compiler_flags, calculate_stack_usage, src, flags, includes, outputs) end,
+        compile_cpp = function(src, flags, includes, outputs) gcc_generic_compiler(prefix..'g++-7 -std=c++14', compiler_flags, calculate_stack_usage, src, flags, includes, outputs) end,
         compile_asm = function(src, flags, includes, outputs) gcc_generic_compiler(prefix..'gcc -x assembler-with-cpp', compiler_flags, false, src, flags, includes, outputs) end,
         link = function(objects, output_name)
             output_name = builddir..'/'..output_name
             tup.frule{
                 inputs=objects,
-                command=prefix..'g++ %f '..
+                command=prefix..'g++-7 %f '..
                         tostring(linker_flags)..' '..
                         '-Wl,-Map=%O.map'..
+
                         ' -o %o',
                 outputs={output_name..'.elf', extra_outputs={output_name..'.map'}}
             }

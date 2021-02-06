@@ -9,10 +9,11 @@ OPENOCD := openocd -f interface/stlink-v2.cfg \
 		$(if $(value PROGRAMMER),-c 'hla_serial $(PROGRAMMER)',) \
 		-f target/stm32f4x.cfg
 
-
-all:
+all: autogen/version.c
 	@tup --quiet --no-environ-check
 
+autogen/version.c: ../.git/index
+	python3 -B ../tools/odrive/version.py --output autogen/version.c                                                
 flash: all
 	$(OPENOCD) -c init \
 		-c 'reset halt' \
